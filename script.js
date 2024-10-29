@@ -1,9 +1,11 @@
 const puppeteer = require("puppeteer");
 let { id, pass } = require("./secret");
 let linkeInLink = "https://www.linkedin.com/feed/";
-let name = "Bogesh";
+let name = "Bo0gesh";
+let lastName = "Jatzzzzzz";
 let phone = 9988776655;
 let email = "jat123@gmail.com";
+let cityName = "Gwalior";
 
 (async () => {
     try {
@@ -41,7 +43,7 @@ let email = "jat123@gmail.com";
 
         
         const jobIds = await page.$$eval('li[data-occludable-job-id]', (listItems) => {
-            return listItems.slice(0, 5).map(li => li.getAttribute('data-occludable-job-id'));
+            return listItems.slice(0, 1).map(li => li.getAttribute('data-occludable-job-id'));
         });
 
         console.log("First 5 Job IDs:", jobIds);
@@ -54,7 +56,6 @@ let email = "jat123@gmail.com";
 
             await applyForJob( jobId, page );
             // break;
-            
         }
 
 
@@ -72,14 +73,61 @@ async function applyForJob(jobId, cpage) {
         if(`button[data-job-id='${jobId}']`){
             await waitAndClick(`button[data-job-id='${jobId}']`, cpage);
         }
+        // await waitAndClick("[aria-label='Continue to next step']", cpage);
+        await fillFieldByLabel(cpage, name, "First name"); // Assuming `name` contains the first name you want to enter
+        // await fillFirstName(cpage, lastName); 
+        await fillFieldByLabel(cpage, lastName, "Last name");
 
-        await waitAndClick("[aria-label='Continue to next step']", cpage);
-       
+        await fillFieldByLabel(cpage, cityName, "Location (city)");
+        
+
+
+
     }
     catch(err) {
         console.log(`Error clicking selector: ${selector}`, err);
     }
 }
+
+async function fillFieldByLabel(page, valueToFill, textToSearch) {
+    try {
+        // Wait for any form component that matches the "single-typeahead" or "single-line-text" data-test attributes
+        await page.waitForSelector('div[data-test-single-typeahead-entity-form-component], div[data-test-single-line-text-form-component]', { timeout: 5000 });
+
+        // Use page.evaluate to find the input ID that matches the label's "for" attribute
+        const inputId = await page.evaluate((textToSearch) => {
+            const labels = document.querySelectorAll("label");
+            for (let label of labels) {
+                // Match the label by checking for textContent that includes textToSearch
+                if (label.textContent.includes(textToSearch)) {
+                    return label.getAttribute("for");
+                }
+            }
+            return null; // Return null if no matching label is found
+        }, textToSearch);
+
+        if (inputId) {
+            const inputSelector = `#${inputId}`;
+
+            // Check if the field is empty before filling
+            const currentValue = await page.$eval(inputSelector, el => el.value);
+            if (!currentValue) {
+                await page.type(inputSelector, valueToFill);
+                console.log(`Filled "${textToSearch}" field with "${valueToFill}".`);
+            } else {
+                console.log(`"${textToSearch}" field is already filled with "${currentValue}".`);
+            }
+        } else {
+            console.log(`Label "${textToSearch}" not found on the page.`);
+        }
+    } catch (err) {
+        console.log(`Error filling the "${textToSearch}" field:`, err);
+    }
+}
+
+
+
+
 
 // Function to wait for a selector and click it
 async function waitAndClick(selector, page) {
